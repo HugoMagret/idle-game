@@ -1,48 +1,64 @@
 import { create } from "zustand";
-import type { GameSnapshot } from "../types/game";
 
-const SAVE_KEY = "chroniques-astrales-save-v1";
-const OFFLINE_CAP_SECONDS = 8 * 60 * 60;
+const SAVE_KEY = "chroniques-astrales-save-v2";
+const OFFLINE_CAP_SECONDS = 12 * 60 * 60;
 
-interface GameState extends GameSnapshot {
+export const ASCENSION_THRESHOLD = 1_000_000_000_000;
+
+export interface GameState {
+  essence: number;
+  totalEssence: number;
+  larmesHorizon: number;
+
+  perSecond: number;
+  clickPower: number;
+  perSecondMultiplier: number;
+
+  buildingAdepts: number;
+  buildingShrines: number;
+  buildingCondensers: number;
+  buildingAltars: number;
+  buildingRifts: number;
+  buildingForges: number;
+
+  lastSavedAt: number;
+
   gatherByHand: () => void;
-  buyWorker: () => void;
-  buyRitual: () => void;
+  buyBuilding: (buildingId: string) => void;
+  prestigeAscension: () => void;
   tick: (deltaSeconds: number) => void;
   save: () => void;
   load: () => void;
   hardReset: () => void;
 }
 
-const initialState: GameSnapshot = {
-  essence: 15,
-  totalEssence: 15,
-  perSecond: 0,
-  clickPower: 1,
-  clickLevel: 1,
-  workerCount: 0,
-  workerCost: 18,
-  ritualLevel: 0,
-  ritualCost: 140,
-  lastSavedAt: Date.now(),
+export const BUILDINGS_DATA: Record<string, { name: string; desc: string; baseCost: number; baseProd: number }> = {
+  adepts: { name: "Adeptes Silencieux", desc: "Meditent pour canaliser l'essence.", baseCost: 15, baseProd: 0.1 },
+  shrines: { name: "Sanctuaires Lumineux", desc: "Monolithes de cristal focalisant la lumiere stellaire.", baseCost: 100, baseProd: 1 },
+  condensers: { name: "Condensateurs Etherees", desc: "Puisent directement dans le plan astral.", baseCost: 1100, baseProd: 8 },
+  altars: { name: "Autels Sacrificiels", desc: "Convertissent la devotion en puissance pure.", baseCost: 12000, baseProd: 47 },
+  rifts: { name: "Failles Cosmiques", desc: "Dechirent la realite pour laisser fuir l'essence.", baseCost: 130000, baseProd: 260 },
+  forges: { name: "Forges Stellaires", desc: "Creent de la matiere astrale a partir du neant.", baseCost: 1400000, baseProd: 1400 },
 };
 
-function toFixed2(value: number) {
-  return Math.round(value * 100) / 100;
-}
+const getBuildingCost = (baseCost: number, count: number) => Math.ceil(baseCost * Math.pow(1.15, count));
+const toFixed2 = (v: number) => Math.round(v * 100) / 100;
 
-function safeParseSave(raw: string | null): Partial<GameSnapshot> | null {
-  if (!raw) {
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(raw) as Partial<GameSnapshot>;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
+const initialState = {
+  essence: 0,
+  totalEssence: 0,
+  larmesHorizon: 0,
+  perSecond: 0,
+  clickPower: 1,
+  perSecondMultiplier: 1,
+  buildingAdepts: 0,
+  buildingShrines: 0,
+  buildingCondensers: 0,
+  buildingAltars: 0,
+  buildingRifts: 0,
+  buildingForges: 0,
+  lastSavedAt: Date.now(),
+};
 
 export const useGameStore = create<GameState>((set, get) => ({
   ...initialState,
@@ -55,54 +71,60 @@ export const useGameStore = create<GameState>((set, get) => ({
     }));
   },
 
-  buyWorker: () => {
-    const { essence, workerCost, workerCount } = get();
+  buyBuilding: (buildingId) => {
+    const data = BUILDINGS_DATA[buildingId];
+    if (!data) return;
 
-    if (essence < workerCost) {
-      return;
-    }
+    const state = get();
+    const countKey = `building${buildingId.charAt(0).toUpperCase() + buildingId.slice(1)}` as keyof GameState;
+    const currentCount = state[countKey] as number;
+    const currentCost = getBuildingCost(data.baseCost, currentCount);
 
-    const newWorkerCount = workerCount + 1;
-    const newPerSecond = toFixed2(newWorkerCount * 0.75);
-    const newCost = toFixed2(workerCost * 1.19);
+    if (state.essence < currentCost) return;
 
-    set((state) => ({
-      essence: toFixed2(state.essence - workerCost),
-      workerCount: newWorkerCount,
-      perSecond: newPerSecond,
-      workerCost: newCost,
-    }));
+    let newRawProduction = 0;
+    Object.keys(BUILDINGS_DATA).forEach((key) => {
+      const bData = BUILDINGS_DATA[key];
+      const dynamicState = get() as unknown as Record<string, number>;
+      const count =
+        dynamicState[`building${key.charAt(0).toUpperCase() + key.slice(1)}`] +
+        (key === buildingId ? 1 : 0);
+      newRawProduction += bData.baseProd * count;
+    });
+
+    set((prevState) => ({
+      essence: toFixed2(prevState.essence - currentCost),
+      [countKey]: currentCount + 1,
+      perSecond: toFixed2(newRawProduction * prevState.perSecondMultiplier),
+    }) as Partial<GameState>);
   },
 
-  buyRitual: () => {
-    const { essence, ritualCost, ritualLevel } = get();
+  prestigeAscension: () => {
+    const { totalEssence, larmesHorizon } = get();
+    if (totalEssence < ASCENSION_THRESHOLD) return;
 
-    if (essence < ritualCost) {
-      return;
-    }
+    const totalLarmesToGet = Math.floor(Math.sqrt(totalEssence / 1_000_000_000_000));
+    const newLarmesWon = totalLarmesToGet - larmesHorizon;
 
-    const nextLevel = ritualLevel + 1;
-    const multiplier = 1 + nextLevel * 0.08;
-    const baseProduction = get().workerCount * 0.75;
+    if (newLarmesWon <= 0) return;
 
-    set((state) => ({
-      essence: toFixed2(state.essence - ritualCost),
-      ritualLevel: nextLevel,
-      perSecond: toFixed2(baseProduction * multiplier),
-      clickPower: toFixed2(1 + nextLevel * 0.35),
-      ritualCost: toFixed2(ritualCost * 1.85),
-    }));
+    const finalLarmes = larmesHorizon + newLarmesWon;
+    const newMultiplier = 1 + finalLarmes * 0.01;
+
+    set({
+      ...initialState,
+      larmesHorizon: finalLarmes,
+      perSecondMultiplier: toFixed2(newMultiplier),
+      totalEssence: finalLarmes * 1_000_000_000,
+    });
+
+    get().save();
   },
 
   tick: (deltaSeconds) => {
     const { perSecond } = get();
-
-    if (perSecond <= 0) {
-      return;
-    }
-
+    if (perSecond <= 0) return;
     const gain = perSecond * deltaSeconds;
-
     set((state) => ({
       essence: toFixed2(state.essence + gain),
       totalEssence: toFixed2(state.totalEssence + gain),
@@ -110,65 +132,40 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   save: () => {
-    const {
-      essence,
-      totalEssence,
-      perSecond,
-      clickPower,
-      clickLevel,
-      workerCount,
-      workerCost,
-      ritualLevel,
-      ritualCost,
-    } = get();
-
-    const payload: GameSnapshot = {
-      essence,
-      totalEssence,
-      perSecond,
-      clickPower,
-      clickLevel,
-      workerCount,
-      workerCost,
-      ritualLevel,
-      ritualCost,
-      lastSavedAt: Date.now(),
-    };
-
+    const state = get();
+    const { save, load, tick, hardReset, gatherByHand, buyBuilding, prestigeAscension, ...snapshot } = state;
+    const payload = { ...snapshot, lastSavedAt: Date.now() };
     localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
-    set({ lastSavedAt: payload.lastSavedAt });
   },
 
   load: () => {
-    const parsed = safeParseSave(localStorage.getItem(SAVE_KEY));
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
 
-    if (!parsed) {
-      return;
+      const merged = { ...initialState, ...parsed };
+
+      const elapsedSeconds = Math.min(
+        OFFLINE_CAP_SECONDS,
+        Math.max(0, (Date.now() - merged.lastSavedAt) / 1000)
+      );
+
+      const offlineGain = merged.perSecond * elapsedSeconds;
+
+      set({
+        ...merged,
+        essence: toFixed2(merged.essence + offlineGain),
+        totalEssence: toFixed2(merged.totalEssence + offlineGain),
+        lastSavedAt: Date.now(),
+      });
+    } catch (e) {
+      console.error("Failed to load save", e);
     }
-
-    const merged: GameSnapshot = {
-      ...initialState,
-      ...parsed,
-      lastSavedAt: parsed.lastSavedAt ?? Date.now(),
-    };
-
-    const elapsedSeconds = Math.min(
-      OFFLINE_CAP_SECONDS,
-      Math.max(0, (Date.now() - merged.lastSavedAt) / 1000)
-    );
-
-    const offlineGain = merged.perSecond * elapsedSeconds;
-
-    set({
-      ...merged,
-      essence: toFixed2(merged.essence + offlineGain),
-      totalEssence: toFixed2(merged.totalEssence + offlineGain),
-      lastSavedAt: Date.now(),
-    });
   },
 
   hardReset: () => {
     localStorage.removeItem(SAVE_KEY);
-    set({ ...initialState, lastSavedAt: Date.now() });
+    set(initialState);
   },
 }));
