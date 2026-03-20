@@ -1,32 +1,20 @@
-import { useMemo } from "react";
-import {
-  useGameStore,
-  BUILDINGS_DATA,
-  UPGRADES_DATA,
-  PRESTIGE_THRESHOLD,
-  BUILDING_STATE_KEYS,
-  toFixed2,
-} from "../store/useGameStore";
-import type { BuildingId, UpgradeData } from "../store/useGameStore";
+import { useGameStore, BUILDINGS_DATA, UPGRADES_DATA, HEROES_DATA, PRESTIGE_THRESHOLD } from "../store/useGameStore";
 
-function formatPremium(value: number) {
+function formatXX(value: number) {
   if (value === 0) return "0.00";
-  const suffixes = ["", "k", " Million", " Milliard", " Trillion", " Quadrillion"];
-  const tier = Math.floor(Math.log10(Math.abs(value)) / 3);
+  const suffixes = ["", "k", " Million", " Milliard", " Trill", " Quad"];
+  const tier = (Math.log10(Math.abs(value)) / 3) | 0;
   if (tier <= 0) return value.toFixed(2);
-  const safeTier = Math.min(tier, suffixes.length - 1);
-  const suffix = suffixes[safeTier];
-  const scale = Math.pow(10, safeTier * 3);
-  const scaled = value / scale;
-  return scaled.toFixed(2) + suffix;
+  const scale = Math.pow(10, tier * 3);
+  return (value / scale).toFixed(2) + " " + suffixes[tier];
 }
 
 const getBuildingCost = (baseCost: number, count: number) => Math.ceil(baseCost * Math.pow(1.15, count));
 
 function StatItem({ title, value, unit, color }: { title: string; value: string; unit?: string; color?: string }) {
   return (
-    <article className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-      <p className="text-xs uppercase tracking-[0.16em] text-white/50">{title}</p>
+    <article className="rounded-xl border border-white/10 bg-white/5 p-4">
+      <p className="text-xs uppercase tracking-[0.1em] text-white/50">{title}</p>
       <p className={`mt-2 text-2xl font-bold ${color ?? "text-white"}`}>
         {value} {unit && <span className="ml-1 text-base text-white/70">{unit}</span>}
       </p>
@@ -34,231 +22,161 @@ function StatItem({ title, value, unit, color }: { title: string; value: string;
   );
 }
 
-function BuildingCard({ id, name, desc, cost, prod, count }: { id: BuildingId; name: string; desc: string; cost: number; prod: number; count: number }) {
-  const iso8 = useGameStore((state) => state.iso8);
-  const buyBuilding = useGameStore((state) => state.buyBuilding);
-  const canAfford = iso8 >= cost;
-
-  return (
-    <button
-      onClick={() => buyBuilding(id)}
-      disabled={!canAfford}
-      className="group relative flex w-full flex-wrap items-center gap-4 rounded-xl border border-white/10 bg-white/5 p-4 text-left transition hover:border-red-500/30 hover:bg-red-950/20 disabled:opacity-40"
-    >
-      <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-2xl font-bold text-white group-hover:border-red-300 group-hover:bg-red-600">
-        {count}
-      </div>
-
-      <div className="flex-1">
-        <p className="font-display text-xl text-white group-hover:text-red-100">{name}</p>
-        <p className="mt-1 text-sm text-white/70">{desc}</p>
-        <p className="mt-3 text-sm font-semibold text-red-300">
-          Cout: {formatPremium(cost)} <span className="text-white/60">• Prod: +{formatPremium(prod)}/s</span>
-        </p>
-      </div>
-
-      {!canAfford && (
-        <div className="absolute inset-0 flex items-center justify-center bg-abyss-900/70 backdrop-blur-[1px]">
-          <span className="text-sm font-semibold text-white/60">Iso-8 insuffisant</span>
-        </div>
-      )}
-    </button>
-  );
-}
-
-function UpgradeCard({ upgrade }: { upgrade: UpgradeData }) {
-  const iso8 = useGameStore((state) => state.iso8);
-  const buyUpgrade = useGameStore((state) => state.buyUpgrade);
-  const canAfford = iso8 >= upgrade.cost;
-
-  const badge =
-    upgrade.type === "click" ? "CLIC" : upgrade.type === "global" ? "GLOBAL" : "EQUIPE";
-
-  return (
-    <button
-      onClick={() => buyUpgrade(upgrade.id)}
-      disabled={!canAfford}
-      className="group relative flex w-full items-center gap-4 rounded-xl border border-white/10 bg-white/5 p-3 text-left transition hover:border-cyan-500/30 hover:bg-cyan-950/20 disabled:opacity-40"
-    >
-      <div className="flex h-10 w-14 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-xs font-bold text-cyan-100 group-hover:bg-cyan-600">
-        {badge}
-      </div>
-      <div className="flex-1">
-        <p className="text-lg font-semibold text-white group-hover:text-cyan-100">{upgrade.name}</p>
-        <p className="text-xs text-white/70">{upgrade.desc} (x{upgrade.multiplier})</p>
-        <p className="mt-2 text-sm font-semibold text-cyan-300">Cout: {formatPremium(upgrade.cost)}</p>
-      </div>
-      {!canAfford && (
-        <div className="absolute inset-0 flex items-center justify-center bg-abyss-900/70 backdrop-blur-[1px]">
-          <span className="text-xs font-semibold text-white/60">Insuffisant</span>
-        </div>
-      )}
-    </button>
-  );
-}
-
 export default function ResourceDisplay() {
   const store = useGameStore();
 
-  const clearance = useMemo(() => {
-    if (store.totalIso8 < 10_000) return "Niveau 1 (Agent)";
-    if (store.totalIso8 < 1_000_000) return "Niveau 4 (Specialiste)";
-    if (store.totalIso8 < 100_000_000) return "Niveau 7 (Tactique)";
-    if (store.totalIso8 < PRESTIGE_THRESHOLD) return "Niveau 9 (Directeur)";
-    return "Niveau 10+ (Parangon)";
-  }, [store.totalIso8]);
+  const gemmesGagnables = Math.floor(Math.sqrt(store.energieTotale / 1_000_000_000_000)) - store.gemmesTemporelles;
+  const canPrestige = store.energieTotale >= PRESTIGE_THRESHOLD && gemmesGagnables > 0;
 
-  const crystauxAGagner = Math.floor(Math.sqrt(store.totalIso8 / 1_000_000_000_000)) - store.crystauxRealite;
-  const canPrestige = store.totalIso8 >= PRESTIGE_THRESHOLD && crystauxAGagner > 0;
+  // Filtrage des éléments disponibles
+  const visibleUpgrades = UPGRADES_DATA.filter(up => {
+    if (store.upgradesOwned.includes(up.id)) return false;
+    if (!up.reqBuild) return true;
+    const countKey = `build${up.reqBuild.charAt(0).toUpperCase() + up.reqBuild.slice(1)}` as keyof typeof store;
+    return (store[countKey] as number) >= up.reqCount;
+  });
 
-  const visibleUpgrades = useMemo(() => {
-    return UPGRADES_DATA.filter((up) => {
-      if (store.upgradesOwned.includes(up.id)) return false;
-      if (!up.requiredBuildingId) return true;
-
-      const key = BUILDING_STATE_KEYS[up.requiredBuildingId];
-      const count = store[key] as number;
-      return count >= (up.requiredBuildingCount ?? 1);
-    });
-  }, [
-    store.upgradesOwned,
-    store.buildStreet,
-    store.buildMutants,
-    store.buildVanguard,
-    store.buildRangers,
-    store.buildCosmic,
-    store.buildTitans,
-  ]);
+  const availableHeroes = HEROES_DATA.filter(h => !store.herosRecrutes.includes(h.id));
 
   return (
-    <section className="relative mx-auto max-w-[1700px] px-4 pb-16 pt-10 sm:px-6 lg:px-8">
-      <div className="pointer-events-none absolute -left-40 top-20 h-96 w-96 rounded-full bg-red-600/20 blur-[128px]" />
-      <div className="pointer-events-none absolute -right-40 top-40 h-96 w-96 rounded-full bg-yellow-500/15 blur-[128px]" />
-
-      <header className="mb-10 text-center">
-        <div className="inline-flex items-center rounded-full border border-red-500/30 bg-red-500/10 px-4 py-1.5 text-xs uppercase tracking-[0.2em] text-red-200">
-          Clearance: {clearance}
-        </div>
-        <h1 className="mt-4 font-display text-5xl font-extrabold text-white sm:text-7xl">
-          Multiverse <span className="text-red-500 shadow-glow-text">Crisis</span>
-        </h1>
-        <p className="mx-auto mt-4 max-w-2xl text-xl text-white/80">
-          Recoltez l'Iso-8, recrutez des equipes d'elite et stabilisez les fractures du multivers.
-        </p>
+    <section className="mx-auto max-w-[1700px] px-4 pb-16 pt-6 font-text text-white">
+      <header className="mb-8 text-center">
+        <h1 className="font-display text-4xl font-bold uppercase tracking-wider text-blue-400">Initiative Multivers</h1>
       </header>
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_2fr_1.2fr]">
-        <aside className="space-y-8">
-          <div className="rounded-3xl border border-white/10 bg-abyss-800/60 p-6 backdrop-blur-xl">
-            <StatItem
-              title="Iso-8 Collecte"
-              value={formatPremium(store.iso8)}
-              unit="E"
-              color="text-red-300"
-            />
-            <div className="mt-4 space-y-3">
-              <StatItem title="Production Finale" value={formatPremium(store.getFinalPerSecond())} unit="/s" />
-              <StatItem title="Puissance du clic" value={formatPremium(store.getFinalClickPower())} unit="/c" />
+      {/* ZONE DE COMBAT (BOSS MAP) */}
+      <div className="mb-8 overflow-hidden rounded-2xl border border-red-500/30 bg-gradient-to-r from-red-950/80 to-slate-900/80 p-6 shadow-lg">
+        <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
+          <div>
+            <h2 className="text-xl font-bold text-red-400">Menace Multiverselle : Niveau {store.bossNiveau}</h2>
+            <p className="text-sm text-slate-300">Puissance de l'équipe : {formatXX(store.getCombatPower())} /s</p>
+          </div>
+          
+          <div className="flex-1 px-4 w-full max-w-2xl">
+            <div className="mb-1 flex justify-between text-sm">
+              <span>Points de Vie (PV)</span>
+              <span>{formatXX(Math.max(0, store.bossPv))} / {formatXX(store.bossPvMax)}</span>
             </div>
-
-            <div className="mt-8">
-              <button
-                onClick={store.generateByClick}
-                className="w-full rounded-2xl bg-red-600 py-6 text-xl font-bold text-white shadow-glow transition hover:-translate-y-1 hover:bg-red-500"
-              >
-                Contrer la menace (+{formatPremium(store.getFinalClickPower())})
-              </button>
+            <div className="h-4 w-full overflow-hidden rounded-full bg-slate-800">
+              <div 
+                className="h-full bg-red-500 transition-all duration-200"
+                style={{ width: `${Math.max(0, (store.bossPv / store.bossPvMax) * 100)}%` }}
+              />
             </div>
           </div>
 
-          <div className="rounded-3xl border border-cyan-500/20 bg-cyan-950/30 p-6 backdrop-blur-xl">
-            <StatItem
-              title="Bonus de Realite"
-              value={`${((store.prestigeMultiplier - 1) * 100).toFixed(0)}%`}
-              color="text-cyan-200"
-            />
-            <div className="mt-3">
-              <StatItem
-                title="Crystaux de Realite"
-                value={store.crystauxRealite.toLocaleString()}
-              />
-            </div>
+          <button
+            onClick={store.attackBoss}
+            className="rounded-lg bg-red-600 px-6 py-3 font-bold text-white transition hover:bg-red-500 active:scale-95"
+          >
+            Frapper ({formatXX(store.getCombatPower())})
+          </button>
+        </div>
+      </div>
 
-            <div className="mt-6">
-              <button
-                onClick={store.performPrestige}
-                disabled={!canPrestige}
-                className="w-full rounded-2xl border border-cyan-400/40 bg-cyan-800/50 py-4 text-lg font-semibold text-white transition enabled:hover:bg-cyan-700 disabled:opacity-40"
-              >
-                {canPrestige
-                  ? `Reinitialisation temporelle (+${crystauxAGagner.toLocaleString()} Crystaux)`
-                  : `Necessite ${formatPremium(PRESTIGE_THRESHOLD)} Iso-8 Total`}
-              </button>
-              <p className="mt-3 text-center text-xs text-white/60">
-                La reinitialisation conserve les crystaux. Chaque crystal apporte +1% de production.
-              </p>
+      <div className="grid gap-6 lg:grid-cols-[1fr_2fr_1fr]">
+        
+        {/* COLONNE 1 : Economie */}
+        <aside className="space-y-6">
+          <div className="rounded-2xl border border-blue-500/20 bg-slate-900/60 p-5">
+            <StatItem title="Énergie Cosmique" value={formatXX(store.energie)} color="text-blue-300" />
+            <div className="mt-4 space-y-3">
+              <StatItem title="Génération" value={formatXX(store.getFinalPerSecond())} unit="/s" />
+              <StatItem title="Clic Manuel" value={formatXX(store.getFinalClickPower())} unit="/c" />
             </div>
+            <button
+              onClick={store.generateByClick}
+              className="mt-6 w-full rounded-xl bg-blue-600 py-4 font-bold transition hover:bg-blue-500"
+            >
+              Collecter Manuellement
+            </button>
+          </div>
+
+          <div className="rounded-2xl border border-purple-500/20 bg-slate-900/60 p-5">
+            <StatItem title="Gemmes Temporelles" value={store.gemmesTemporelles.toString()} color="text-purple-300" />
+            <p className="mt-2 text-sm text-slate-400">Bonus actuel : +{((store.prestigeMultiplier - 1) * 100).toFixed(0)}%</p>
+            <button
+              onClick={store.performPrestige}
+              disabled={!canPrestige}
+              className="mt-4 w-full rounded-xl border border-purple-500/50 bg-purple-900/40 py-3 text-sm font-semibold transition enabled:hover:bg-purple-800 disabled:opacity-50"
+            >
+              {canPrestige ? `Réinitialiser (+${gemmesGagnables} Gemmes)` : `Requis: ${formatXX(PRESTIGE_THRESHOLD)} Total`}
+            </button>
           </div>
         </aside>
 
-        <main className="rounded-3xl border border-white/10 bg-abyss-800/40 p-6 backdrop-blur-lg">
-          <h2 className="mb-6 font-display text-3xl font-bold text-white">Alliances Multiverselles</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {(Object.keys(BUILDINGS_DATA) as BuildingId[]).map((id) => {
+        {/* COLONNE 2 : Infrastructures */}
+        <main className="rounded-2xl border border-slate-700 bg-slate-900/60 p-5">
+          <h2 className="mb-4 text-2xl font-bold">Infrastructures</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {Object.keys(BUILDINGS_DATA).map((id) => {
               const data = BUILDINGS_DATA[id];
-              const key = BUILDING_STATE_KEYS[id];
-              const count = store[key] as number;
+              const countKey = `build${id.charAt(0).toUpperCase() + id.slice(1)}` as keyof typeof store;
+              const count = store[countKey] as number;
               const cost = getBuildingCost(data.baseCost, count);
-
-              let buildingMultiplier = 1;
-              store.upgradesOwned.forEach((upId) => {
-                const up = UPGRADES_DATA.find((u) => u.id === upId);
-                if (up && up.type === "building" && up.targetBuildingId === id) {
-                  buildingMultiplier *= up.multiplier;
-                }
-              });
-
-              const finalProd = toFixed2(
-                data.baseProd * buildingMultiplier * store.globalMultiplier * store.prestigeMultiplier
-              );
+              const canAfford = store.energie >= cost;
 
               return (
-                <BuildingCard
+                <button
                   key={id}
-                  id={id}
-                  name={data.name}
-                  desc={data.desc}
-                  cost={cost}
-                  prod={finalProd}
-                  count={count}
-                />
+                  onClick={() => store.buyBuilding(id)}
+                  disabled={!canAfford}
+                  className="flex flex-col rounded-xl border border-slate-600 bg-slate-800 p-4 text-left transition enabled:hover:border-blue-400 disabled:opacity-50"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold">{data.name}</span>
+                    <span className="rounded bg-slate-700 px-2 py-1 text-sm font-bold">{count}</span>
+                  </div>
+                  <span className="mt-1 text-xs text-slate-400">{data.desc}</span>
+                  <div className="mt-3 flex justify-between text-sm">
+                    <span className="text-blue-300">Coût: {formatXX(cost)}</span>
+                  </div>
+                </button>
               );
             })}
           </div>
         </main>
 
-        <aside className="rounded-3xl border border-white/10 bg-abyss-800/40 p-6 backdrop-blur-lg">
-          <h2 className="mb-6 font-display text-3xl font-bold text-white">Ameliorations</h2>
-          <div className="space-y-4">
-            {visibleUpgrades.length === 0 && (
-              <div className="rounded-xl border border-white/10 bg-white/5 p-6 text-center text-white/50">
-                <p className="font-semibold">Aucune technologie disponible</p>
-                <p className="mt-2 text-sm">Recrutez plus d'equipes pour debloquer de nouveaux protocoles.</p>
-              </div>
-            )}
-            {visibleUpgrades.slice(0, 10).map((up) => (
-              <UpgradeCard key={up.id} upgrade={up} />
-            ))}
-            {visibleUpgrades.length > 10 && (
-              <p className="text-center text-xs text-white/50">{visibleUpgrades.length - 10} autres ameliorations masquees...</p>
-            )}
+        {/* COLONNE 3 : Améliorations & Héros */}
+        <aside className="space-y-6">
+          <div className="rounded-2xl border border-green-500/20 bg-slate-900/60 p-5">
+            <h2 className="mb-4 text-xl font-bold text-green-400">Technologie</h2>
+            <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
+              {visibleUpgrades.map(up => (
+                <button
+                  key={up.id}
+                  onClick={() => store.buyUpgrade(up.id)}
+                  disabled={store.energie < up.cost}
+                  className="w-full rounded-lg border border-green-900 bg-green-950/30 p-3 text-left transition enabled:hover:border-green-500 disabled:opacity-50"
+                >
+                  <p className="font-bold text-green-100">{up.name}</p>
+                  <p className="text-xs text-green-300/70">{up.desc}</p>
+                  <p className="mt-1 text-xs font-bold text-green-400">Coût: {formatXX(up.cost)}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-orange-500/20 bg-slate-900/60 p-5">
+            <h2 className="mb-4 text-xl font-bold text-orange-400">Recrutement Unique</h2>
+            <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
+              {availableHeroes.map(hero => (
+                <button
+                  key={hero.id}
+                  onClick={() => store.buyHero(hero.id)}
+                  disabled={store.energie < hero.cost}
+                  className="w-full rounded-lg border border-orange-900 bg-orange-950/30 p-3 text-left transition enabled:hover:border-orange-500 disabled:opacity-50"
+                >
+                  <p className="font-bold text-orange-100">{hero.name}</p>
+                  <p className="text-xs text-orange-300/70">{hero.desc}</p>
+                  <p className="mt-1 text-xs font-bold text-orange-400">Coût: {formatXX(hero.cost)}</p>
+                </button>
+              ))}
+            </div>
           </div>
         </aside>
-      </div>
 
-      <footer className="mt-12 text-center text-sm text-white/40">
-        Iso-8 total accumule: {formatPremium(store.totalIso8)} • Version multiverselle v1 active.
-      </footer>
+      </div>
     </section>
   );
 }
