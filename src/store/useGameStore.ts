@@ -1,12 +1,10 @@
 import { create } from "zustand";
 
-const SAVE_KEY = "marvel-idle-v3";
+const SAVE_KEY = "marvel-idle-v4";
 const OFFLINE_CAP_SECONDS = 12 * 60 * 60;
 export const PRESTIGE_THRESHOLD = 1_000_000_000_000;
-export const toFixed2 = (v: number) => Math.round(v * 100) / 100;
 
 interface GameState {
-  // Économie
   energie: number;
   energieTotale: number;
   gemmesTemporelles: number;
@@ -17,25 +15,26 @@ interface GameState {
   clickMultiplier: number;
   prestigeMultiplier: number;
 
-  // Bâtiments (Infrastructures)
   buildShield: number;
   buildKamar: number;
   buildStark: number;
   buildAsgard: number;
   buildWakanda: number;
+  buildXmansion: number;
+  buildBaxter: number;
+  buildKnowhere: number;
+  buildSakaar: number;
+  buildNidavellir: number;
 
-  // Tableaux de déblocages
   upgradesOwned: string[];
-  herosRecrutes: string[]; // Nouveauté : Héros uniques pour le combat
+  herosRecrutes: string[];
 
-  // Combat (Boss)
   bossNiveau: number;
   bossPv: number;
   bossPvMax: number;
 
   lastSavedAt: number;
 
-  // Actions
   generateByClick: () => void;
   buyBuilding: (buildingId: string) => void;
   buyUpgrade: (upgradeId: string) => void;
@@ -58,9 +57,13 @@ export const BUILDINGS_DATA: Record<string, { name: string; desc: string; baseCo
   stark: { name: "Réacteurs Stark", desc: "Génération d'énergie propre.", baseCost: 1100, baseProd: 8 },
   asgard: { name: "Forges d'Asgard", desc: "Utilisent la puissance stellaire.", baseCost: 12000, baseProd: 47 },
   wakanda: { name: "Mines de Vibranium", desc: "Extraction à haut rendement.", baseCost: 130000, baseProd: 260 },
+  xmansion: { name: "Institut Xavier", desc: "Amplification télépathique.", baseCost: 1500000, baseProd: 1400 },
+  baxter: { name: "Baxter Building", desc: "Recherche interdimensionnelle.", baseCost: 18000000, baseProd: 8500 },
+  knowhere: { name: "Station Knowhere", desc: "Réseau commercial galactique.", baseCost: 250000000, baseProd: 55000 },
+  sakaar: { name: "Arènes de Sakaar", desc: "Énergie de combat brute.", baseCost: 3500000000, baseProd: 400000 },
+  nidavellir: { name: "Étoile de Nidavellir", desc: "Fusion cosmique absolue.", baseCost: 50000000000, baseProd: 3500000 },
 };
 
-// Améliorations économiques plus compréhensibles
 export const UPGRADES_DATA = [
   { id: "eco_1", name: "Gants Renforcés", desc: "Le clic produit x2.", cost: 100, type: "click", multiplier: 2, reqBuild: "shield", reqCount: 1 },
   { id: "eco_2", name: "Communication S.H.I.E.L.D.", desc: "Agents x2.", cost: 500, type: "building", target: "shield", multiplier: 2, reqBuild: "shield", reqCount: 10 },
@@ -68,20 +71,42 @@ export const UPGRADES_DATA = [
   { id: "eco_4", name: "I.A. J.A.R.V.I.S.", desc: "Réacteurs x2.", cost: 50000, type: "building", target: "stark", multiplier: 2, reqBuild: "stark", reqCount: 5 },
   { id: "eco_5", name: "Uru Raffiné", desc: "Forges x2.", cost: 250000, type: "building", target: "asgard", multiplier: 2, reqBuild: "asgard", reqCount: 5 },
   { id: "eco_6", name: "Sceptre de Loki", desc: "Production globale +10%.", cost: 1000000, type: "global", multiplier: 1.1, reqBuild: "asgard", reqCount: 10 },
+  { id: "eco_7", name: "Armure Mark V", desc: "Le clic produit x3.", cost: 2500000, type: "click", multiplier: 3, reqBuild: "stark", reqCount: 15 },
+  { id: "eco_8", name: "Herbe Cœur", desc: "Mines x2.", cost: 5000000, type: "building", target: "wakanda", multiplier: 2, reqBuild: "wakanda", reqCount: 5 },
+  { id: "eco_9", name: "Cerebro", desc: "Institut x2.", cost: 45000000, type: "building", target: "xmansion", multiplier: 2, reqBuild: "xmansion", reqCount: 5 },
+  { id: "eco_10", name: "Portail Fantastique", desc: "Baxter x2.", cost: 300000000, type: "building", target: "baxter", multiplier: 2, reqBuild: "baxter", reqCount: 5 },
+  { id: "eco_11", name: "Marché Noir", desc: "Knowhere x2.", cost: 2000000000, type: "building", target: "knowhere", multiplier: 2, reqBuild: "knowhere", reqCount: 5 },
+  { id: "eco_12", name: "Champion de Sakaar", desc: "Arènes x2.", cost: 15000000000, type: "building", target: "sakaar", multiplier: 2, reqBuild: "sakaar", reqCount: 5 },
+  { id: "eco_13", name: "Moule d'Uru", desc: "Nidavellir x2.", cost: 250000000000, type: "building", target: "nidavellir", multiplier: 2, reqBuild: "nidavellir", reqCount: 5 },
+  { id: "eco_14", name: "Tesseract", desc: "Production globale x2.", cost: 500000000, type: "global", multiplier: 2, reqBuild: "xmansion", reqCount: 15 },
+  { id: "eco_15", name: "Aether", desc: "Production globale x2.", cost: 10000000000, type: "global", multiplier: 2, reqBuild: "knowhere", reqCount: 10 },
 ];
 
-// Héros pour le système de Boss (Achat unique)
 export const HEROES_DATA = [
-  { id: "cap", name: "Captain America", desc: "Stratège. Puissance: 5", cost: 500, power: 5 },
-  { id: "bw", name: "Black Widow", desc: "Infiltration. Puissance: 15", cost: 2500, power: 15 },
-  { id: "im", name: "Iron Man", desc: "Artillerie lourde. Puissance: 50", cost: 10000, power: 50 },
-  { id: "spidey", name: "Spider-Man", desc: "Agilité. Puissance: 120", cost: 45000, power: 120 },
-  { id: "hulk", name: "Hulk", desc: "Force brute. Puissance: 400", cost: 200000, power: 400 },
-  { id: "thor", name: "Thor", desc: "Dieu du tonnerre. Puissance: 1500", cost: 1000000, power: 1500 },
+  { id: "daredevil", name: "Daredevil", desc: "Sens radar. Puissance: 2", cost: 250, power: 2 },
+  { id: "cap", name: "Captain America", desc: "Stratège. Puissance: 8", cost: 1000, power: 8 },
+  { id: "bw", name: "Black Widow", desc: "Infiltration. Puissance: 15", cost: 3500, power: 15 },
+  { id: "wolverine", name: "Wolverine", desc: "Régénération. Puissance: 35", cost: 12000, power: 35 },
+  { id: "im", name: "Iron Man", desc: "Artillerie lourde. Puissance: 80", cost: 45000, power: 80 },
+  { id: "spidey", name: "Spider-Man", desc: "Agilité. Puissance: 150", cost: 150000, power: 150 },
+  { id: "bp", name: "Black Panther", desc: "Technologie Wakandaise. Puissance: 300", cost: 400000, power: 300 },
+  { id: "hulk", name: "Hulk", desc: "Force brute. Puissance: 750", cost: 1200000, power: 750 },
+  { id: "thor", name: "Thor", desc: "Dieu du tonnerre. Puissance: 2000", cost: 4500000, power: 2000 },
+  { id: "strange", name: "Dr. Strange", desc: "Arts mystiques. Puissance: 5000", cost: 15000000, power: 5000 },
+  { id: "wanda", name: "Scarlet Witch", desc: "Magie du chaos. Puissance: 12000", cost: 50000000, power: 12000 },
+  { id: "starlord", name: "Star-Lord", desc: "Tacticien galactique. Puissance: 25000", cost: 150000000, power: 25000 },
+  { id: "captainmarvel", name: "Captain Marvel", desc: "Énergie cosmique. Puissance: 60000", cost: 500000000, power: 60000 },
+  { id: "silver", name: "Silver Surfer", desc: "Pouvoir cosmique. Puissance: 150000", cost: 2000000000, power: 150000 },
+];
+
+export const VILLAINS_LIST = [
+  "Kingpin", "Red Skull", "Killmonger", "Loki", "Green Goblin", 
+  "Doc Ock", "Ronan", "Hela", "Ultron", "Magneto", 
+  "Apocalypse", "Kang le Conquérant", "Dormammu", "Thanos", "Galactus"
 ];
 
 const getBuildingCost = (baseCost: number, count: number) => Math.ceil(baseCost * Math.pow(1.15, count));
-const getBossMaxPv = (level: number) => Math.floor(100 * Math.pow(1.4, level - 1));
+const getBossMaxPv = (level: number) => Math.floor(1000 * Math.pow(1.6, level - 1));
 
 const initialState = {
   energie: 0,
@@ -97,22 +122,27 @@ const initialState = {
   buildStark: 0,
   buildAsgard: 0,
   buildWakanda: 0,
+  buildXmansion: 0,
+  buildBaxter: 0,
+  buildKnowhere: 0,
+  buildSakaar: 0,
+  buildNidavellir: 0,
   upgradesOwned: [],
   herosRecrutes: [],
   bossNiveau: 1,
-  bossPv: 100,
-  bossPvMax: 100,
+  bossPv: 1000,
+  bossPvMax: 1000,
   lastSavedAt: Date.now(),
 };
 
 export const useGameStore = create<GameState>((set, get) => ({
   ...initialState,
 
-  getFinalPerSecond: () => toFixed2(get().rawPerSecond * get().globalMultiplier * get().prestigeMultiplier),
-  getFinalClickPower: () => toFixed2(get().rawClickPower * get().clickMultiplier * get().prestigeMultiplier),
+  getFinalPerSecond: () => get().rawPerSecond * get().globalMultiplier * get().prestigeMultiplier,
+  getFinalClickPower: () => get().rawClickPower * get().clickMultiplier * get().prestigeMultiplier,
   
   getCombatPower: () => {
-    let power = 1; // Base de 1
+    let power = 1;
     get().herosRecrutes.forEach(hId => {
       const hero = HEROES_DATA.find(h => h.id === hId);
       if (hero) power += hero.power;
@@ -123,8 +153,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   generateByClick: () => {
     const power = get().getFinalClickPower();
     set((state) => ({
-      energie: toFixed2(state.energie + power),
-      energieTotale: toFixed2(state.energieTotale + power),
+      energie: state.energie + power,
+      energieTotale: state.energieTotale + power,
     }));
   },
 
@@ -151,7 +181,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     });
 
     set((state) => ({
-      energie: toFixed2(state.energie - currentCost),
+      energie: state.energie - currentCost,
       [countKey]: currentCount + 1,
       rawPerSecond: newRawProduction,
     }));
@@ -186,7 +216,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     });
 
     set({
-      energie: toFixed2(state.energie - data.cost),
+      energie: state.energie - data.cost,
       upgradesOwned: newUpgradesOwned,
       rawPerSecond: newRawPerSecond,
       clickMultiplier: newClickMultiplier,
@@ -200,7 +230,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (!hero || state.energie < hero.cost || state.herosRecrutes.includes(heroId)) return;
 
     set({
-      energie: toFixed2(state.energie - hero.cost),
+      energie: state.energie - hero.cost,
       herosRecrutes: [...state.herosRecrutes, heroId],
     });
   },
@@ -211,20 +241,19 @@ export const useGameStore = create<GameState>((set, get) => ({
     let newPv = state.bossPv - power;
 
     if (newPv <= 0) {
-      // Boss vaincu : récompense en énergie + niveau suivant
       const nextLevel = state.bossNiveau + 1;
       const nextMaxPv = getBossMaxPv(nextLevel);
-      const reward = toFixed2(50 * Math.pow(1.5, state.bossNiveau - 1));
+      const reward = 250 * Math.pow(1.8, state.bossNiveau - 1);
       
       set({
         bossNiveau: nextLevel,
         bossPv: nextMaxPv,
         bossPvMax: nextMaxPv,
-        energie: toFixed2(state.energie + reward),
-        energieTotale: toFixed2(state.energieTotale + reward),
+        energie: state.energie + reward,
+        energieTotale: state.energieTotale + reward,
       });
     } else {
-      set({ bossPv: toFixed2(newPv) });
+      set({ bossPv: newPv });
     }
   },
 
@@ -240,7 +269,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     set({
       ...initialState,
       gemmesTemporelles: finalGemmes,
-      prestigeMultiplier: toFixed2(1 + finalGemmes * 0.01),
+      prestigeMultiplier: 1 + finalGemmes * 0.01,
       energieTotale: finalGemmes * 1_000_000,
       energie: finalGemmes * 1_000_000,
     });
@@ -251,7 +280,6 @@ export const useGameStore = create<GameState>((set, get) => ({
     const state = get();
     const gain = state.getFinalPerSecond() * deltaSeconds;
     
-    // Le boss subit des dégâts automatiques par seconde basés sur la puissance de combat
     let newPv = state.bossPv - (state.getCombatPower() * deltaSeconds);
     let nextLevel = state.bossNiveau;
     let nextMaxPv = state.bossPvMax;
@@ -262,14 +290,14 @@ export const useGameStore = create<GameState>((set, get) => ({
       nextLevel += 1;
       nextMaxPv = getBossMaxPv(nextLevel);
       newPv = nextMaxPv;
-      const reward = 50 * Math.pow(1.5, state.bossNiveau - 1);
+      const reward = 250 * Math.pow(1.8, state.bossNiveau - 1);
       currentEnergie += reward;
       currentTotale += reward;
     }
 
     set({
-      energie: toFixed2(currentEnergie),
-      energieTotale: toFixed2(currentTotale),
+      energie: currentEnergie,
+      energieTotale: currentTotale,
       bossPv: newPv,
       bossNiveau: nextLevel,
       bossPvMax: nextMaxPv
@@ -292,8 +320,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     
     set({
       ...merged,
-      energie: toFixed2(merged.energie + offlineGain),
-      energieTotale: toFixed2(merged.energieTotale + offlineGain),
+      energie: merged.energie + offlineGain,
+      energieTotale: merged.energieTotale + offlineGain,
       lastSavedAt: Date.now(),
     });
   },

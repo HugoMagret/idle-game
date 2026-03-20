@@ -1,8 +1,8 @@
-import { useGameStore, BUILDINGS_DATA, UPGRADES_DATA, HEROES_DATA, PRESTIGE_THRESHOLD } from "../store/useGameStore";
+import { useGameStore, BUILDINGS_DATA, UPGRADES_DATA, HEROES_DATA, VILLAINS_LIST, PRESTIGE_THRESHOLD } from "../store/useGameStore";
 
 function formatXX(value: number) {
   if (value === 0) return "0.00";
-  const suffixes = ["", "k", " Million", " Milliard", " Trill", " Quad"];
+  const suffixes = ["", "k", " Million", " Milliard", " Trill", " Quad", " Quint"];
   const tier = (Math.log10(Math.abs(value)) / 3) | 0;
   if (tier <= 0) return value.toFixed(2);
   const scale = Math.pow(10, tier * 3);
@@ -28,7 +28,6 @@ export default function ResourceDisplay() {
   const gemmesGagnables = Math.floor(Math.sqrt(store.energieTotale / 1_000_000_000_000)) - store.gemmesTemporelles;
   const canPrestige = store.energieTotale >= PRESTIGE_THRESHOLD && gemmesGagnables > 0;
 
-  // Filtrage des éléments disponibles
   const visibleUpgrades = UPGRADES_DATA.filter(up => {
     if (store.upgradesOwned.includes(up.id)) return false;
     if (!up.reqBuild) return true;
@@ -38,18 +37,25 @@ export default function ResourceDisplay() {
 
   const availableHeroes = HEROES_DATA.filter(h => !store.herosRecrutes.includes(h.id));
 
+  // Détermination du nom du boss
+  const bossIndex = (store.bossNiveau - 1) % VILLAINS_LIST.length;
+  const loopCount = Math.floor((store.bossNiveau - 1) / VILLAINS_LIST.length);
+  const bossName = loopCount > 0 ? `${VILLAINS_LIST[bossIndex]} (Clone ${loopCount + 1})` : VILLAINS_LIST[bossIndex];
+  const bossReward = 250 * Math.pow(1.8, store.bossNiveau - 1);
+
   return (
     <section className="mx-auto max-w-[1700px] px-4 pb-16 pt-6 font-text text-white">
       <header className="mb-8 text-center">
         <h1 className="font-display text-4xl font-bold uppercase tracking-wider text-blue-400">Initiative Multivers</h1>
       </header>
 
-      {/* ZONE DE COMBAT (BOSS MAP) */}
+      {/* ZONE DE COMBAT */}
       <div className="mb-8 overflow-hidden rounded-2xl border border-red-500/30 bg-gradient-to-r from-red-950/80 to-slate-900/80 p-6 shadow-lg">
         <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-          <div>
-            <h2 className="text-xl font-bold text-red-400">Menace Multiverselle : Niveau {store.bossNiveau}</h2>
-            <p className="text-sm text-slate-300">Puissance de l'équipe : {formatXX(store.getCombatPower())} /s</p>
+          <div className="min-w-[200px]">
+            <h2 className="text-xl font-bold text-red-400">Menace : {bossName} (Niv. {store.bossNiveau})</h2>
+            <p className="text-sm text-slate-300">Dégâts infligés : {formatXX(store.getCombatPower())} /s</p>
+            <p className="text-xs text-yellow-400">Prime de défaite : +{formatXX(bossReward)}</p>
           </div>
           
           <div className="flex-1 px-4 w-full max-w-2xl">
@@ -141,7 +147,8 @@ export default function ResourceDisplay() {
         <aside className="space-y-6">
           <div className="rounded-2xl border border-green-500/20 bg-slate-900/60 p-5">
             <h2 className="mb-4 text-xl font-bold text-green-400">Technologie</h2>
-            <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
+            <div className="space-y-2 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+              {visibleUpgrades.length === 0 && <p className="text-sm text-slate-500">Aucune technologie disponible.</p>}
               {visibleUpgrades.map(up => (
                 <button
                   key={up.id}
@@ -159,7 +166,8 @@ export default function ResourceDisplay() {
 
           <div className="rounded-2xl border border-orange-500/20 bg-slate-900/60 p-5">
             <h2 className="mb-4 text-xl font-bold text-orange-400">Recrutement Unique</h2>
-            <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
+            <div className="space-y-2 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+              {availableHeroes.length === 0 && <p className="text-sm text-slate-500">Tous les héros ont été recrutés.</p>}
               {availableHeroes.map(hero => (
                 <button
                   key={hero.id}
