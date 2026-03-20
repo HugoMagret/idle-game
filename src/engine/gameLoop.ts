@@ -1,7 +1,6 @@
 import { useGameStore } from "../store/useGameStore";
 
 const MIN_FRAME_MS = 1000 / 60;
-const MAX_DELTA_SECONDS = 0.25;
 
 export function startGameLoop() {
   let frameId = 0;
@@ -11,7 +10,9 @@ export function startGameLoop() {
     const elapsedMs = currentTime - previousTime;
 
     if (elapsedMs >= MIN_FRAME_MS) {
-      const deltaSeconds = Math.min(elapsedMs / 1000, MAX_DELTA_SECONDS);
+      // Calcul du delta réel, sans plafond, pour traiter les périodes d'inactivité de l'onglet
+      const deltaSeconds = elapsedMs / 1000;
+      
       useGameStore.getState().tick(deltaSeconds);
       previousTime = currentTime;
     }

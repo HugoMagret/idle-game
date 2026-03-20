@@ -279,20 +279,31 @@ export const useGameStore = create<GameState>((set, get) => ({
   tick: (deltaSeconds) => {
     const state = get();
     const gain = state.getFinalPerSecond() * deltaSeconds;
+    const combatDegats = state.getCombatPower() * deltaSeconds;
     
-    let newPv = state.bossPv - (state.getCombatPower() * deltaSeconds);
+    let newPv = state.bossPv - combatDegats;
     let nextLevel = state.bossNiveau;
     let nextMaxPv = state.bossPvMax;
     let currentEnergie = state.energie + gain;
     let currentTotale = state.energieTotale + gain;
 
-    if (newPv <= 0) {
+    // Résolution itérative des niveaux passés en arrière-plan
+    let maxIterations = 500;
+    while (newPv <= 0 && maxIterations > 0) {
       nextLevel += 1;
       nextMaxPv = getBossMaxPv(nextLevel);
-      newPv = nextMaxPv;
-      const reward = 250 * Math.pow(1.8, state.bossNiveau - 1);
+      newPv += nextMaxPv;
+      
+      const reward = 250 * Math.pow(1.8, nextLevel - 2);
       currentEnergie += reward;
       currentTotale += reward;
+      
+      maxIterations--;
+    }
+
+    // Sécurité anticrash en cas d'absence prolongée avec DPS très élevé
+    if (newPv <= 0) {
+      newPv = nextMaxPv;
     }
 
     set({
@@ -315,6 +326,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (!raw) return;
     const parsed = JSON.parse(raw);
     const merged = { ...initialState, ...parsed };
+    
+    // Le calcul hors-ligne est désormais supporté par l'absence de plafond dans requestAnimationFrame. 
+    // On conserve un calcul de base si le navigateur a vidé le cache mémoire de l'onglet.
     const elapsed = Math.min(OFFLINE_CAP_SECONDS, Math.max(0, (Date.now() - merged.lastSavedAt) / 1000));
     const offlineGain = merged.rawPerSecond * merged.globalMultiplier * merged.prestigeMultiplier * elapsed;
     
