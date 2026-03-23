@@ -1,4 +1,4 @@
-import { useGameStore, BUILDINGS_DATA, UPGRADES_DATA, HEROES_DATA, VILLAINS_LIST, PRESTIGE_THRESHOLD } from "../store/useGameStore.ts";
+import { useGameStore, BUILDINGS_DATA, UPGRADES_DATA, HEROES_DATA, VILLAINS_LIST, PRESTIGE_THRESHOLD } from "../store/useGameStore";
 
 function formatXX(value: number) {
   if (value === 0) return "0.00";
@@ -111,16 +111,26 @@ export default function ResourceDisplay() {
           </div>
         </aside>
 
-        {/* COLONNE 2 : Infrastructures */}
+        {/* COLONNE 2 : Factions Alliées */}
         <main className="rounded-2xl border border-slate-700 bg-slate-900/60 p-5">
-          <h2 className="mb-4 text-2xl font-bold">Infrastructures</h2>
+          <h2 className="mb-4 text-2xl font-bold">Factions Alliées</h2>
           <div className="grid gap-3 sm:grid-cols-2">
             {Object.keys(BUILDINGS_DATA).map((id) => {
               const data = BUILDINGS_DATA[id];
               const countKey = `build${id.charAt(0).toUpperCase() + id.slice(1)}` as keyof typeof store;
-              const count = store[countKey] as number;
+
+              const count = (store[countKey] as number) || 0;
               const cost = getBuildingCost(data.baseCost, count);
               const canAfford = store.energie >= cost;
+
+              let bMultiplier = 1;
+              store.upgradesOwned.forEach((upId) => {
+                const upData = UPGRADES_DATA.find((u) => u.id === upId);
+                if (upData && upData.type === "building" && upData.target === id) {
+                  bMultiplier *= upData.multiplier;
+                }
+              });
+              const productionTotaleBatiment = data.baseProd * count * bMultiplier * store.globalMultiplier * store.prestigeMultiplier;
 
               return (
                 <button
@@ -130,12 +140,13 @@ export default function ResourceDisplay() {
                   className="flex flex-col rounded-xl border border-slate-600 bg-slate-800 p-4 text-left transition enabled:hover:border-blue-400 disabled:opacity-50"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-bold">{data.name}</span>
+                    <span className="font-bold text-sm">{data.name}</span>
                     <span className="rounded bg-slate-700 px-2 py-1 text-sm font-bold">{count}</span>
                   </div>
                   <span className="mt-1 text-xs text-slate-400">{data.desc}</span>
-                  <div className="mt-3 flex justify-between text-sm">
+                  <div className="mt-3 flex flex-col gap-1 text-xs">
                     <span className="text-blue-300">Coût: {formatXX(cost)}</span>
+                    <span className="text-green-400">Prod. totale: {formatXX(productionTotaleBatiment)} /s</span>
                   </div>
                 </button>
               );
