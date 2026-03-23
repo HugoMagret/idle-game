@@ -14,7 +14,7 @@ const getBuildingCost = (baseCost: number, count: number) => Math.ceil(baseCost 
 
 function StatItem({ title, value, unit, color, animatePulse = false }: any) {
   return (
-    <article className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm transition-all hover:border-white/20">
+    <article className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm transition-colors hover:border-white/20">
       <p className="text-xs uppercase tracking-[0.15em] text-white/50">{title}</p>
       <p className={`mt-2 text-3xl font-bold ${color ?? "text-white"} ${animatePulse ? "animate-pulse" : ""}`}>
         {value}<span className="ml-1 text-lg text-white/60">{unit}</span>
@@ -68,16 +68,11 @@ export default function ResourceDisplay() {
       <div className={`mb-10 overflow-hidden rounded-3xl border border-red-500/30 bg-slate-950/50 p-6 shadow-2xl backdrop-blur-sm transition-all ${bossHitAnim ? "animate-boss-hit border-red-500" : ""}`}>
         <div className="flex flex-col items-center gap-6 lg:flex-row">
           
-          <div className="relative flex h-32 w-32 shrink-0 items-center justify-center rounded-full border-2 border-red-700 bg-black shadow-[0_0_30px_rgba(239,68,68,0.3)] animate-float overflow-hidden">
+          <div className="relative flex h-32 w-32 shrink-0 items-center justify-center rounded-full border-2 border-red-700 bg-slate-900 shadow-[0_0_30px_rgba(239,68,68,0.3)] animate-float overflow-hidden">
             <img 
-              src={`/assets/villains/${villainId}.webp`} 
+              src={`https://robohash.org/${encodeURIComponent(villainId)}?set=set2&bgset=bg2&size=150x150`} 
               alt={bossName}
               className="h-full w-full object-cover"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.onerror = null;
-                target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(bossName)}&background=450a0a&color=f87171&size=128&bold=true`;
-              }}
             />
             <div className="absolute bottom-0 w-full bg-red-600/90 py-0.5 text-center text-xs font-bold uppercase backdrop-blur-sm">Cible</div>
           </div>
@@ -121,7 +116,7 @@ export default function ResourceDisplay() {
             </div>
             <button
               onClick={store.generateByClick}
-              className="mt-8 w-full rounded-2xl bg-gradient-to-b from-blue-500 to-blue-700 py-6 text-xl font-extrabold uppercase tracking-tight text-white shadow-[0_0_20px_rgba(56,189,248,0.3)] transition-all hover:from-blue-400 hover:to-blue-600 hover:scale-[1.02] active:scale-[0.98]"
+              className="mt-8 w-full rounded-2xl bg-gradient-to-b from-blue-500 to-blue-700 py-6 text-xl font-extrabold uppercase tracking-tight text-white shadow-[0_0_20px_rgba(56,189,248,0.3)] transition-transform hover:scale-[1.02] active:scale-[0.98]"
             >
               Collecter Énergie
             </button>
@@ -133,7 +128,7 @@ export default function ResourceDisplay() {
             <button
               onClick={store.performPrestige}
               disabled={!canPrestige}
-              className="mt-5 w-full rounded-xl border border-purple-500/50 bg-purple-900/30 py-4 text-lg font-bold transition-all enabled:hover:bg-purple-800 enabled:hover:shadow-[0_0_15px_rgba(168,85,247,0.4)] disabled:opacity-40 disabled:cursor-not-allowed"
+              className="mt-5 w-full rounded-xl border border-purple-500/50 bg-purple-900/30 py-4 text-lg font-bold transition-colors enabled:hover:bg-purple-800 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {canPrestige ? `S'élever (+${gemmesGagnables} Gemmes)` : `Requis: ${formatXX(PRESTIGE_THRESHOLD)} Énergie Totale`}
             </button>
@@ -163,18 +158,13 @@ export default function ResourceDisplay() {
                   key={id}
                   onClick={() => store.buyBuilding(id)}
                   disabled={!canAfford}
-                  className="group flex items-center gap-4 rounded-xl border border-slate-700 bg-slate-800/80 p-4 text-left transition-all enabled:hover:border-blue-400 enabled:hover:bg-slate-700/50 enabled:hover:scale-[1.01] disabled:opacity-50"
+                  className="group flex items-center gap-4 rounded-xl border border-slate-700 bg-slate-800/80 p-4 text-left transition-colors enabled:hover:border-blue-400 enabled:hover:bg-slate-700/50 disabled:opacity-50"
                 >
-                  <div className="h-16 w-16 shrink-0 rounded-lg bg-black/30 border border-slate-600 p-1 group-enabled:group-hover:border-blue-500 transition-colors flex items-center justify-center overflow-hidden">
+                  <div className="h-16 w-16 shrink-0 rounded-lg bg-slate-900 border border-slate-600 transition-colors flex items-center justify-center overflow-hidden">
                     <img 
-                      src={`/assets/factions/${id}.webp`} 
+                      src={`https://picsum.photos/seed/${encodeURIComponent(id)}/100/100`} 
                       alt={data.name} 
-                      className="h-full w-full object-cover rounded-md" 
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.onerror = null;
-                        target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name)}&background=0f172a&color=38bdf8&size=64&bold=true`;
-                      }}
+                      className="h-full w-full object-cover rounded-md opacity-80 group-enabled:group-hover:opacity-100 transition-opacity"
                     />
                   </div>
 
@@ -205,7 +195,7 @@ export default function ResourceDisplay() {
                   key={up.id}
                   onClick={() => store.buyUpgrade(up.id)}
                   disabled={store.energie < up.cost}
-                  className="w-full rounded-xl border border-green-900 bg-green-950/20 p-4 text-left transition-all enabled:hover:border-green-500 enabled:hover:bg-green-950/40 disabled:opacity-50"
+                  className="w-full rounded-xl border border-green-900 bg-green-950/20 p-4 text-left transition-colors enabled:hover:border-green-500 enabled:hover:bg-green-950/40 disabled:opacity-50"
                 >
                   <p className="font-bold text-green-100">{up.name}</p>
                   <p className="text-xs text-green-300/80 mt-0.5">{up.desc} (<span className="font-bold">x{up.multiplier}</span> {up.type === 'click' ? 'Clic' : up.type === 'global' ? 'Global' : 'Faction'})</p>
@@ -224,17 +214,12 @@ export default function ResourceDisplay() {
                   key={hero.id}
                   onClick={() => store.buyHero(hero.id)}
                   disabled={store.energie < hero.cost}
-                  className="group w-full rounded-xl border border-orange-900 bg-orange-950/20 p-4 text-left transition-all enabled:hover:border-orange-500 enabled:hover:bg-orange-950/40 disabled:opacity-50 flex gap-3 items-center"
+                  className="group w-full rounded-xl border border-orange-900 bg-orange-950/20 p-4 text-left transition-colors enabled:hover:border-orange-500 enabled:hover:bg-orange-950/40 disabled:opacity-50 flex gap-3 items-center"
                 >
                   <img 
-                    src={`/assets/heroes/${hero.id}.webp`} 
+                    src={`https://robohash.org/${encodeURIComponent(hero.id)}?set=set3&bgset=bg1&size=100x100`} 
                     alt={hero.name} 
-                    className="h-12 w-12 rounded-full object-cover border border-orange-800 group-enabled:group-hover:border-orange-400"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.onerror = null;
-                      target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(hero.name)}&background=431407&color=fb923c&size=64&bold=true`;
-                    }}
+                    className="h-12 w-12 rounded-full object-cover border border-orange-800 bg-slate-900"
                   />
                   
                   <div className="flex-1">
@@ -254,7 +239,7 @@ export default function ResourceDisplay() {
       </div>
       
       <footer className="mt-16 text-center text-xs text-slate-600 border-t border-slate-800 pt-8">
-        Énergie totale accumulée dans cette réalité : {formatXX(store.energieTotale)} • Version Multivers Crisis v1.2.
+        Énergie totale accumulée dans cette réalité : {formatXX(store.energieTotale)} • Version Multivers Crisis v1.3.
       </footer>
     </section>
   );
