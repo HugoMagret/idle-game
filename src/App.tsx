@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import ResourceDisplay from "./components/ResourceDisplay.tsx";
+import ResourceDisplay from "./components/ResourceDisplay";
 import { startGameLoop } from "./engine/gameLoop";
 import { useGameStore } from "./store/useGameStore";
 
