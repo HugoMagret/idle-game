@@ -1,6 +1,110 @@
 import { useState } from "react";
 import { useGameStore, BUILDINGS_DATA, UPGRADES_DATA, HEROES_DATA, VILLAINS_LIST, PRESTIGE_THRESHOLD } from "../store/useGameStore";
 
+const ASSETS = {
+  factions: {
+    shield: "https://upload.wikimedia.org/wikipedia/fr/2/24/Logo_du_Strategic_Homeland_Intervention_Enforcement_Logistics_Division.svg",
+    kamar: "https://static.wikia.nocookie.net/marvelstudios/images/0/08/Attack_on_Kamar-Taj.png/revision/latest?cb=20230523111209&path-prefix=fr",
+    stark: "https://static.wikia.nocookie.net/marvelmovies/images/f/f0/Stark_Industries_SNWH.png/revision/latest?cb=20220503211317",
+    asgard: "https://www.marvel-cineverse.fr/medias/images/siegedasgard-imgprofil.jpg",
+    wakanda: "https://static.wikia.nocookie.net/marvelstudios/images/9/9f/Black-panther-dora-milaje.jpg/revision/latest?cb=20210627100413&path-prefix=fr",
+    xmansion: "https://static.wikia.nocookie.net/xmenmovies/images/d/d3/Xavier-s-school-for-gifted-children-aka-the-x-mansion-in-the-x-men-films.png/revision/latest?cb=20241013181532",
+    baxter: "https://preview.redd.it/concept-art-of-the-baxter-building-v0-urkeyzzq8s9f1.jpeg?auto=webp&s=90c2615a6ae059bb7e948237461344ab4ca195f7",
+    knowhere: "https://static.wikia.nocookie.net/marvelstudios/images/d/d9/Knowhere_-_movie.png/revision/latest?cb=20160625112642&path-prefix=fr",
+    sakaar: "https://www.marvel-world.com/contents/encyclopedie/lieux/s/sakaar/sakaar_13.jpg",
+    nidavellir: "https://static.wikia.nocookie.net/marvelstudios/images/a/aa/Eitri1.webp/revision/latest?cb=20220331091005&path-prefix=fr",
+    pym: "https://static.wikia.nocookie.net/marvelstudios/images/8/8b/Ant-Man_Pym_Technologies_building.jpg/revision/latest/scale-to-width-down/1200?cb=20151125162051&path-prefix=fr",
+    avengers: "https://static.wikia.nocookie.net/marvelstudios/images/7/7e/Avengers_Tower_AoU_cropped.webp/revision/latest?cb=20210405134718&path-prefix=fr",
+    xandar: "https://static.wikia.nocookie.net/marveldatabase/images/4/4c/Nova_Corps_%28Earth-616%29_from_Champions_Vol_3_8_001.jpg/revision/latest?cb=20200811034209",
+    ravagers: "https://static.wikia.nocookie.net/marvelstudios/images/6/6d/TheRavagers.jpg/revision/latest?cb=20180907202121&path-prefix=fr",
+    tva: "https://preview.redd.it/did-anyone-else-actually-feel-bad-for-the-tva-agents-in-the-v0-xjt95s0mmmtd1.jpeg?auto=webp&s=da9e26f97dba08758b118c9203c3192bf009526d",
+    talo: "https://static.wikia.nocookie.net/marvelcinematicuniverse/images/0/0f/Ta_Lo_Armed_Forces.png/revision/latest?cb=20211207022347",
+    sorcieres: "https://www.superpouvoir.com/wp-content/uploads/2024/09/salem-seven-faq1-1200x600.jpg",
+    kang: "https://www.marvel-world.com/contents/encyclopedie/biographies/k/kang-le-conquerant/kang-le-conquerant_10.jpg",
+    wundagore: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSG8FGIZ39RtuUA-x5rYfPUQnYIsbCJxiRhrQ&s",
+    le_vide: "https://www.premiere.fr/sites/default/files/styles/scale_crop_1280x720/public/2025-09/Marvel%20Zombies_0.jpg"
+  } as Record<string, string>,
+  heroes: {
+    hawkeye: "https://static.wikia.nocookie.net/marvelstudios/images/2/27/Clint_Barton-Endgame-Profil.jpg/revision/latest?cb=20190610084832&path-prefix=fr",
+    daredevil: "https://static.tvtropes.org/pmwiki/pub/images/a2b300a4_14fc_470e_9a06_5acd5059b429.jpeg",
+    falcon: "https://i.redd.it/f878j337uqk21.jpg",
+    cap: "https://image.jeuxvideo.com/medias-md/168216/1682158014-8260-card.jpg",
+    ws: "https://static.wikia.nocookie.net/villains-fr/images/f/f0/Bucky_barnes.jpg/revision/latest?cb=20210211204534&path-prefix=fr",
+    bw: "https://static.wikia.nocookie.net/marvelstudios/images/c/ca/3198DFA3-B895-4149-AF94-F4EC7E4D9BFF.jpeg/revision/latest?cb=20210323194108&path-prefix=fr",
+    antman: "https://mediaproxy.tvtropes.org/width/1200/https://static.tvtropes.org/pmwiki/pub/images/b72de7d5_4856_4e00_8a57_ab8f227e7e26.jpeg",
+    wolverine: "https://static.wikia.nocookie.net/marvelcinematicuniverse/images/5/57/The_Wolverine.jpg/revision/latest?cb=20240621175727",
+    im: "https://images.immediate.co.uk/production/volatile/sites/3/2018/05/IRON-2008-d7a2706.jpg?quality=90&resize=800,534",
+    spidey: "https://upload.wikimedia.org/wikipedia/en/0/0f/Tom_Holland_as_Spider-Man.jpg",
+    bp: "https://upload.wikimedia.org/wikipedia/en/1/1a/Chadwick_Boseman_as_T%27Challa.jpg",
+    shangchi: "https://static.wikia.nocookie.net/marvelcinematicuniverse/images/4/40/Shang-Chi_Profile.jpg/revision/latest?cb=20250318203001",
+    hulk: "https://i.redd.it/xn3o532apjrb1.jpg",
+    vision: "https://upload.wikimedia.org/wikipedia/en/f/fc/Paul_Bettany_as_Vision.jpg",
+    thor: "https://upload.wikimedia.org/wikipedia/en/thumb/3/3c/Chris_Hemsworth_as_Thor.jpg/250px-Chris_Hemsworth_as_Thor.jpg",
+    strange: "https://static.wikia.nocookie.net/ultimate-marvel-cinematic-universe/images/6/61/Doc.jpg/revision/latest?cb=20160117222945",
+    wanda: "https://static.wikia.nocookie.net/heroes-and-villain/images/3/36/Profile_-_Scarlet_Witch.png/revision/latest?cb=20241117013207",
+    starlord: "https://static.wikia.nocookie.net/marvelstudios/images/4/40/Star-lord-poster-infinity.jpg/revision/latest?cb=20180404234211&path-prefix=fr",
+    groot: "https://static.wikia.nocookie.net/heros/images/2/22/Groot_MCU_Infobox.jpg/revision/latest?cb=20200719195311&path-prefix=fr",
+    rocket: "https://i.redd.it/rocket-raccoon-is-the-smartest-character-in-the-mcu-thoughts-v0-92h0exh7fogb1.jpg?width=980&format=pjpg&auto=webp&s=968ad9ea24017b55ce4ab57511b0a35533aabdc3",
+    captainmarvel: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQyQtwumMK4z-sDXl3nBUI87NuZPETl7ZGY5Q&s",
+    silver: "https://static.wikia.nocookie.net/marvelcinematicuniverse/images/6/65/Shalla-Bal_%28Silver_Surfer%29_Infobox.png/revision/latest?cb=20250716023128",
+    namor: "https://preview.redd.it/is-mcu-namor-good-v0-swkhj5yclujd1.jpeg?auto=webp&s=65c65a260318159ca0bcfa901a6f87bcccf3b3fe",
+    ghostrider: "https://preview.redd.it/who-is-currently-the-ghost-rider-in-the-mcu-who-would-you-v0-teop6rya2cfe1.jpeg?auto=webp&s=f048f3a603fb1aac9855b397172b4cce82e43861",
+    blade: "https://www.premiere.fr/sites/default/files/styles/scale_crop_border_white_1280x720/public/2024-08/FotoJet%20-%202024-08-13T110234.963.jpg",
+    deadpool: "https://www.numerama.com/wp-content/uploads/2022/03/deadpool-oops.jpg",
+    cable: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTtgxbjEUzEeD_joQzUQiSdjeodsPKVJ87k3LIKpkh8DQ&s&ec=121585071",
+    jeangrey: "https://static.wikia.nocookie.net/heroes-and-villain/images/a/a7/Jean_GreyXMen_Movies.png/revision/latest?cb=20220430145716",
+    cyclops: "https://static.wikia.nocookie.net/xmenfirstclass/images/3/3f/Xmen-apocalypse-poster-personnage-cyclope.jpg/revision/latest?cb=20160408131912&path-prefix=fr",
+    storm: "https://upload.wikimedia.org/wikipedia/en/3/34/Storm_%28Ororo_Munroe%29.png"
+  } as Record<string, string>,
+  villains: {
+    "Batroc": "https://www.fulguropop.com/wp-content/uploads/2020/01/batroc-mcu.jpg",
+    "Crossbones": "https://www.marvel-cineverse.fr/medias/images/crossbones-profile-cacw.jpg",
+    "Zemo": "https://static.wikia.nocookie.net/marvelcinematicuniverse/images/d/d5/TF%26TWS_Textless_Character_Posters_02.jpg/revision/latest?cb=20231021161327",
+    "Vautour": "https://static.wikia.nocookie.net/marvelstudios/images/3/37/Vautour.png/revision/latest?cb=20171125120804&path-prefix=fr",
+    "Mysterio": "https://pyxis.nymag.com/v1/imgs/d6c/f43/4d468e94dc1b52619ab1886258eb3d9fc1-02-mysterio.rsquare.w400.jpg",
+    "Taskmaster": "https://www.marvel-cineverse.fr/medias/images/taskmaster-tdbs-imgprofil.jpg",
+    "Kingpin": "https://upload.wikimedia.org/wikipedia/en/c/cf/Vincent_D%27Onofrio_as_Wilson_Fisk_in_Daredevil_%28TV_series%29.jpg",
+    "Kraven": "https://static.wixstatic.com/media/e18c18_77914060fc444579a9b5812383d4101f~mv2.jpg/v1/fill/w_568,h_320,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/e18c18_77914060fc444579a9b5812383d4101f~mv2.jpg",
+    "Lézard": "https://static.wikia.nocookie.net/marvelstudios/images/a/a6/Lizard_%28SM_NWH%29_official_site.webp/revision/latest?cb=20221111153913&path-prefix=fr",
+    "Homme-Sable": "https://static.wikia.nocookie.net/marvelstudios/images/2/20/Sandman044.JPG.webp/revision/latest?cb=20221111155411&path-prefix=fr",
+    "Electro": "https://www.marvel-cineverse.fr/medias/images/electroimgprofil.jpg",
+    "Rhino": "https://i.redd.it/t6wz9elqcgf51.jpg",
+    "Red Skull": "https://static.wikia.nocookie.net/marvelstudios/images/1/18/Captain-America-The-First-Avenger_519e83c9.jpg/revision/latest?cb=20151215152031&path-prefix=fr",
+    "Killmonger": "https://cdn.marvel.com/content/2x/108kmg_ons_cut_mob_01_0.jpg",
+    "Loki": "https://static.wikia.nocookie.net/marvelstudios/images/4/47/IM_3896.jpeg/revision/latest?cb=20231114174632&path-prefix=fr",
+    "Green Goblin": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSNRypuvN3EEdPzEeZItiL3HpG0qHG-IxRkFt7Jhwc6mw&s&ec=121585071",
+    "Doc Ock": "https://static.wikia.nocookie.net/marvelcinematicuniverse/images/f/fc/DOC_OCK.png/revision/latest?cb=20231122140523",
+    "Abomination": "https://www.marvel-cineverse.fr/medias/images/abomination-sha-imgprofil.jpg",
+    "Le Leader": "https://www.marvel-cineverse.fr/medias/images/leader-cabnw-imgprofil.jpg",
+    "Whiplash": "https://i.redd.it/4wiiqt22ous11.jpg",
+    "Le Mandarin": "https://sm.ign.com/t/ign_fr/news/k/kevin-feig/kevin-feige-confirms-the-return-of-the-mandarin-in-the-mcu_rxep.1280.jpg",
+    "Venom": "https://www.begeek.fr/app/uploads/2025/08/Venom-660x422.jpeg",
+    "Carnage": "https://i.redd.it/8k21o7qjke7b1.jpg",
+    "Ronan l'Accusateur": "https://wiki.marvel-world.com/images/thumb/c/cc/Ronan_Terre-199999-Portrait.jpg/300px-Ronan_Terre-199999-Portrait.jpg",
+    "Malekith": "https://static.wikia.nocookie.net/marvelstudios/images/1/10/Malekith-TextlessPoster1.webp/revision/latest?cb=20210621170435&path-prefix=fr",
+    "Kurse": "https://static.wikia.nocookie.net/marvelcinematicuniverse/images/6/6b/Algrim_Kursed.png/revision/latest?cb=20140914185653",
+    "Hela": "https://i.redd.it/xddomca1wiff1.jpeg",
+    "Surtur": "https://fbi.cults3d.com/uploaders/16795539/illustration-file/3522863a-e4a5-4d1e-886d-425493a81049/surtur-6.png",
+    "Ultron": "https://static.wikia.nocookie.net/marvelstudios/images/a/a2/Infobox-1_Ultron.jpg/revision/latest?cb=20171206213312&path-prefix=fr",
+    "Sentinelles": "https://preview.redd.it/i-feel-like-when-they-introduce-the-sentinels-in-the-mcu-v0-z524jc3typid1.jpeg?auto=webp&s=8e89a3ea182264fef8927f66d635f3864e49bdd0",
+    "Bastion": "https://upload.wikimedia.org/wikipedia/en/1/14/Bastion.PNG",
+    "Magneto": "https://static.wikia.nocookie.net/villains-fr/images/5/5c/Crop.jpg/revision/latest?cb=20201102203030&path-prefix=fr",
+    "Mystique": "https://i.pinimg.com/564x/f1/cb/67/f1cb678fdb60ebafb0c8c9491e820995.jpg",
+    "Dents-de-Sabre": "https://playcontestofchampions.com/wp-content/uploads/2023/04/champion-sabretooth.webp",
+    "Le Fléau": "https://static.wikia.nocookie.net/xmenfirstclass/images/e/ec/Le_Fl%C3%A9au_dans_Deadpool_2.jpg/revision/latest?cb=20180527175221&path-prefix=fr",
+    "Mr. Sinistre": "https://preview.redd.it/when-do-you-think-theyll-introduce-mister-sinister-into-the-v0-ifxcu43xz1ze1.jpeg?width=640&crop=smart&auto=webp&s=06376983aabd843f51f4a0f461691dcf02e04520",
+    "Apocalypse": "https://i.redd.it/f267am7ut5ib1.jpg",
+    "Ego la Planète Vivante": "https://www.fulguropop.com/wp-content/uploads/2019/10/ego-gotg2.png",
+    "Maître de l'Évolution": "https://www.marvel-cineverse.fr/medias/images/maitredelevolution-preview-cardvignette.jpg",
+    "Gorr le Boucher des Dieux": "https://www.premiere.fr/sites/default/files/styles/partage_rs/public/2022-05/for.jpg",
+    "Dormammu": "https://cdn.marvel.com/content/2x/121dmu_ons_mas_mob_03.jpg",
+    "Kang le Conquérant": "https://vl-media.fr/wp-content/uploads/2022/01/Kang-le-Conquerant-MCU-comics-Marvel.jpg",
+    "Alioth": "https://static.wikia.nocookie.net/marvelstudios/images/9/94/Alioth.jpg/revision/latest?cb=20210712162659&path-prefix=fr",
+    "Thanos": "https://www.melty.fr/wp-content/uploads/meltyfr/2022/02/media-69368-750x410.jpg",
+    "Galactus": "https://i.redd.it/hope-the-mcu-gives-galactus-a-very-lovecraftian-inspired-v0-bjdicra7rof81.jpg?width=828&format=pjpg&auto=webp&s=9900f761b09d6e03ba952b4d5c88bd4b8ccce467"
+  } as Record<string, string>
+};
+
 function formatXX(value: number) {
   if (value === 0) return "0.00";
   const suffixes = ["", "k", " Million", " Milliard", " Trill", " Quad", " Quint"];
@@ -41,9 +145,10 @@ export default function ResourceDisplay() {
 
   const bossIndex = (store.bossNiveau - 1) % VILLAINS_LIST.length;
   const loopCount = Math.floor((store.bossNiveau - 1) / VILLAINS_LIST.length);
-  const villainId = VILLAINS_LIST[bossIndex].toLowerCase().replace(/ /g, "_");
-  const bossName = loopCount > 0 ? `${VILLAINS_LIST[bossIndex]} C-${loopCount + 1}` : VILLAINS_LIST[bossIndex];
+  const bossKeyName = VILLAINS_LIST[bossIndex];
+  const bossName = loopCount > 0 ? `${bossKeyName} C-${loopCount + 1}` : bossKeyName;
   const bossReward = 250 * Math.pow(1.8, store.bossNiveau - 1);
+  const bossImageUrl = ASSETS.villains[bossKeyName] || `https://robohash.org/${encodeURIComponent(bossKeyName)}?set=set2&size=150x150`;
 
   const handleAttackBoss = () => {
     store.attackBoss();
@@ -70,9 +175,9 @@ export default function ResourceDisplay() {
           
           <div className="relative flex h-32 w-32 shrink-0 items-center justify-center rounded-full border-2 border-red-700 bg-slate-900 shadow-[0_0_30px_rgba(239,68,68,0.3)] animate-float overflow-hidden">
             <img 
-              src={`https://robohash.org/${encodeURIComponent(villainId)}?set=set2&bgset=bg2&size=150x150`} 
+              src={bossImageUrl} 
               alt={bossName}
-              className="h-full w-full object-cover"
+              className="h-full w-full object-cover object-center"
             />
             <div className="absolute bottom-0 w-full bg-red-600/90 py-0.5 text-center text-xs font-bold uppercase backdrop-blur-sm">Cible</div>
           </div>
@@ -98,7 +203,7 @@ export default function ResourceDisplay() {
 
           <button
             onClick={handleAttackBoss}
-            className="rounded-xl bg-red-600 px-10 py-5 text-xl font-bold text-white shadow-[0_5px_0_#b91c1c] transition-all hover:bg-red-500 hover:shadow-[0_3px_0_#b91c1c] hover:translate-y-0.5 active:translate-y-1 active:shadow-none"
+            className="rounded-xl bg-red-600 px-10 py-5 text-xl font-bold text-white shadow-[0_5px_0_#b91c1c] transition-colors hover:bg-red-500 active:bg-red-700"
           >
             ATTAQUER
           </button>
@@ -116,7 +221,7 @@ export default function ResourceDisplay() {
             </div>
             <button
               onClick={store.generateByClick}
-              className="mt-8 w-full rounded-2xl bg-gradient-to-b from-blue-500 to-blue-700 py-6 text-xl font-extrabold uppercase tracking-tight text-white shadow-[0_0_20px_rgba(56,189,248,0.3)] transition-transform hover:scale-[1.02] active:scale-[0.98]"
+              className="mt-8 w-full rounded-2xl bg-gradient-to-b from-blue-500 to-blue-700 py-6 text-xl font-extrabold uppercase tracking-tight text-white shadow-[0_0_20px_rgba(56,189,248,0.3)] transition-colors hover:from-blue-400 hover:to-blue-600"
             >
               Collecter Énergie
             </button>
@@ -137,7 +242,7 @@ export default function ResourceDisplay() {
         </aside>
 
         <main className="rounded-3xl border border-slate-700 bg-slate-950/40 p-6 backdrop-blur-sm shadow-xl animate-fade-in [animation-delay:200ms]">
-          <h2 className="mb-6 font-display text-3xl font-bold text-white tracking-tight">Factions Alliées <span className="text-sm text-slate-400 font-normal">({Object.keys(BUILDINGS_DATA).length})</span></h2>
+          <h2 className="mb-6 font-display text-2xl font-bold text-white tracking-tight">Factions Alliées</h2>
           <div className="grid gap-4 sm:grid-cols-2 max-h-[800px] overflow-y-auto pr-3 custom-scrollbar">
             {Object.keys(BUILDINGS_DATA).map((id) => {
               const data = BUILDINGS_DATA[id];
@@ -160,11 +265,11 @@ export default function ResourceDisplay() {
                   disabled={!canAfford}
                   className="group flex items-center gap-4 rounded-xl border border-slate-700 bg-slate-800/80 p-4 text-left transition-colors enabled:hover:border-blue-400 enabled:hover:bg-slate-700/50 disabled:opacity-50"
                 >
-                  <div className="h-16 w-16 shrink-0 rounded-lg bg-slate-900 border border-slate-600 transition-colors flex items-center justify-center overflow-hidden">
+                  <div className="h-16 w-16 shrink-0 rounded-lg bg-slate-900 border border-slate-600 flex items-center justify-center overflow-hidden">
                     <img 
-                      src={`https://picsum.photos/seed/${encodeURIComponent(id)}/100/100`} 
+                      src={ASSETS.factions[id] || `https://ui-avatars.com/api/?name=${id}&background=0f172a&color=38bdf8`} 
                       alt={data.name} 
-                      className="h-full w-full object-cover rounded-md opacity-80 group-enabled:group-hover:opacity-100 transition-opacity"
+                      className="h-full w-full object-cover object-center"
                     />
                   </div>
 
@@ -217,9 +322,9 @@ export default function ResourceDisplay() {
                   className="group w-full rounded-xl border border-orange-900 bg-orange-950/20 p-4 text-left transition-colors enabled:hover:border-orange-500 enabled:hover:bg-orange-950/40 disabled:opacity-50 flex gap-3 items-center"
                 >
                   <img 
-                    src={`https://robohash.org/${encodeURIComponent(hero.id)}?set=set3&bgset=bg1&size=100x100`} 
+                    src={ASSETS.heroes[hero.id] || `https://ui-avatars.com/api/?name=${hero.name}&background=431407&color=fb923c`} 
                     alt={hero.name} 
-                    className="h-12 w-12 rounded-full object-cover border border-orange-800 bg-slate-900"
+                    className="h-12 w-12 rounded-full object-cover object-center border border-orange-800 bg-slate-900"
                   />
                   
                   <div className="flex-1">
@@ -239,7 +344,7 @@ export default function ResourceDisplay() {
       </div>
       
       <footer className="mt-16 text-center text-xs text-slate-600 border-t border-slate-800 pt-8">
-        Énergie totale accumulée dans cette réalité : {formatXX(store.energieTotale)} • Version Multivers Crisis v1.3.
+        Énergie totale accumulée dans cette réalité : {formatXX(store.energieTotale)}
       </footer>
     </section>
   );
